@@ -12,9 +12,8 @@ summary_path = "./summary"
 batch_size = 4
 val_batch_size = 20
 epochs = 1000
-
-inner_lr = 0.01
-outer_lr = 0.001
+inner_lr = 0.02
+outer_lr = 0.0001
 
 n_way = 5
 k_shot = 1
