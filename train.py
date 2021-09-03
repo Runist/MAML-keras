@@ -64,4 +64,4 @@ if __name__ == '__main__':
             val_progbar.update(i+1, [('val_loss', np.mean(val_meta_loss)),
                                      ('val_accuracy', np.mean(val_meta_acc))])
 
-        maml.meta_model.save_weights("maml_.h5")
+        maml.meta_model.save_weights("maml.h5")
