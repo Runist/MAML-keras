@@ -11,38 +11,34 @@ import numpy as np
 
 from dataReader import MAMLDataLoader
 from net import MAML
-import config as cfg
+from config import args
 import shutil
 import os
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-    if os.path.exists(cfg.summary_path):
-        shutil.rmtree(cfg.summary_path)
-    writer = tf.summary.create_file_writer(cfg.summary_path)
+    train_data = MAMLDataLoader(args.train_data_dir, args.batch_size)
+    val_data = MAMLDataLoader(args.val_data_dir, args.val_batch_size)
 
-    train_data = MAMLDataLoader(cfg.train_data_path, cfg.batch_size)
-    val_data = MAMLDataLoader(cfg.train_data_path, cfg.val_batch_size)
+    inner_optimizer = optimizers.Adam(args.inner_lr)
+    outer_optimizer = optimizers.Adam(args.outer_lr)
 
-    inner_optimizer = optimizers.Adam(cfg.inner_lr)
-    outer_optimizer = optimizers.Adam(cfg.outer_lr)
-
-    maml = MAML(cfg.input_shape, cfg.n_way)
+    maml = MAML(args.input_shape, args.n_way)
     # 验证次数可以少一些，不需要每次都更新这么多
     val_data.steps = 10
 
-    for e in range(cfg.epochs):
+    for e in range(args.epochs):
 
         train_progbar = utils.Progbar(train_data.steps)
         val_progbar = utils.Progbar(val_data.steps)
-        print('\nEpoch {}/{}'.format(e+1, cfg.epochs))
+        print('\nEpoch {}/{}'.format(e+1, args.epochs))
 
         train_meta_loss = []
         train_meta_acc = []
@@ -53,8 +49,7 @@ if __name__ == '__main__':
             batch_train_loss, acc = maml.train_on_batch(train_data.get_one_batch(),
                                                         inner_optimizer,
                                                         inner_step=1,
-                                                        outer_optimizer=outer_optimizer,
-                                                        writer=writer)
+                                                        outer_optimizer=outer_optimizer)
 
             train_meta_loss.append(batch_train_loss)
             train_meta_acc.append(acc)

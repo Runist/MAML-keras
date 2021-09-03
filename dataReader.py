@@ -9,6 +9,7 @@ import random
 import numpy as np
 import glob
 import cv2 as cv
+import tensorflow as tf
 
 
 class MAMLDataLoader:
@@ -30,6 +31,9 @@ class MAMLDataLoader:
         self.q_query = q_query
         self.meta_batch_size = batch_size
 
+    def __len__(self):
+        return self.steps
+
     def get_one_task_data(self):
         """
         获取一个task，一个task内有n_way个类，每个类有k_shot张用于inner训练，q_query张用于outer训练
@@ -50,16 +54,17 @@ class MAMLDataLoader:
 
             # Read support set
             for img_path in images[:self.k_shot]:
-                image = cv.imread(img_path)
-                image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+                image = cv.imread(img_path, cv.IMREAD_UNCHANGED)
+                image = image / 255.
+                image = np.expand_dims(image, axis=-1)
                 support_data.append((image, label))
 
             # Read query set
             for img_path in images[self.k_shot:]:
-                image = cv.imread(img_path)
-                image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-                query_image.append(image)
-                query_label.append(label)
+                image = cv.imread(img_path, cv.IMREAD_UNCHANGED)
+                image = image / 255.
+                image = np.expand_dims(image, axis=-1)
+                query_data.append((image, label))
 
         # shuffle support set
         random.shuffle(support_data)

@@ -11,7 +11,7 @@ import numpy as np
 
 from dataReader import MAMLDataLoader
 from net import MAML
-import config as cfg
+from config import args
 import os
 
 if __name__ == '__main__':
@@ -21,35 +21,41 @@ if __name__ == '__main__':
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-    val_data = MAMLDataLoader(cfg.test_data_path, cfg.val_batch_size)
+    val_data = MAMLDataLoader(args.val_data_dir, args.val_batch_size)
 
-    random_model = MAML(cfg.input_shape, cfg.n_way)
-    maml = MAML(cfg.input_shape, cfg.n_way)
+    mnist_model = MAML(args.input_shape, args.n_way)
+    maml = MAML(args.input_shape, args.n_way)
 
     # 对比测试
-    optimizer = optimizers.Adam(cfg.inner_lr)
-    val_loss, val_acc = random_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=3)
-    print("Model with random initialize weight train for 3 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
-    optimizer = optimizers.Adam(cfg.inner_lr)
-    val_loss, val_acc = random_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=5)
-    print("Model with random initialize weight train for 5 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
+    # mnist weights
+    mnist_model.meta_model.load_weights("mnist.h5")
+    optimizer = optimizers.Adam(args.inner_lr)
+    val_loss, val_acc = mnist_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=3)
+    print("Model with mnist initialize weight train for 3 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
-    optimizer = optimizers.Adam(cfg.inner_lr)
-    val_loss, val_acc = random_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=10)
-    print("Model with random initialize weight train for 10 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
+    mnist_model.meta_model.load_weights("mnist.h5")
+    optimizer = optimizers.Adam(args.inner_lr)
+    val_loss, val_acc = mnist_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=5)
+    print("Model with mnist initialize weight train for 5 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
+    mnist_model.meta_model.load_weights("mnist.h5")
+    optimizer = optimizers.Adam(args.inner_lr)
+    val_loss, val_acc = mnist_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=10)
+    print("Model with mnist initialize weight train for 10 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
+
+    # maml weights
     maml.meta_model.load_weights("maml.h5")
-    optimizer = optimizers.Adam(cfg.inner_lr)
+    optimizer = optimizers.Adam(args.inner_lr)
     val_loss, val_acc = maml.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=3)
     print("Model with maml weight train for 3 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
     maml.meta_model.load_weights("maml.h5")
-    optimizer = optimizers.Adam(cfg.inner_lr)
+    optimizer = optimizers.Adam(args.inner_lr)
     val_loss, val_acc = maml.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=5)
     print("Model with maml weight train for 5 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
     maml.meta_model.load_weights("maml.h5")
-    optimizer = optimizers.Adam(cfg.inner_lr)
+    optimizer = optimizers.Adam(args.inner_lr)
     val_loss, val_acc = maml.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=10)
     print("Model with maml weight train for 10 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))

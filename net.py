@@ -19,10 +19,7 @@ class MAML:
         """
         self.input_shape = input_shape
         self.num_classes = num_classes
-        # 因为不能修改到meta model的权重θ和梯度更新状态，所以在更新θ’时需要用另外一个模型作为载体
         self.meta_model = self.get_maml_model()
-        self.inner_writer_step = 0
-        self.outer_writer_step = 0
 
     def get_maml_model(self):
         """
@@ -53,63 +50,64 @@ class MAML:
 
         return model
 
-    def train_on_batch(self, train_data, inner_optimizer, inner_step, outer_optimizer=None, writer=None):
+    def train_on_batch(self, train_data, inner_optimizer, inner_step, outer_optimizer=None):
         """
         MAML一个batch的训练过程
         :param train_data: 训练数据，以task为一个单位
         :param inner_optimizer: support set对应的优化器
         :param inner_step: 内部更新几个step
         :param outer_optimizer: query set对应的优化器，如果对象不存在则不更新梯度
-        :param writer: 用于记录tensorboard
         :return: batch query loss
         """
         batch_acc = []
         batch_loss = []
+        task_weights = []
+
+        # 用meta_weights保存一开始的权重，并将其设置为inner step模型的权重
+        meta_weights = self.meta_model.get_weights()
 
         meta_support_image, meta_support_label, meta_query_image, meta_query_label = next(train_data)
-        for support_image, support_label, query_image, query_label in zip(meta_support_image, meta_support_label,
-                                                                          meta_query_image, meta_query_label):
+        for support_image, support_label in zip(meta_support_image, meta_support_label):
 
-            # 用meta_weights保存一开始的权重，并将其设置为inner step模型的权重
-            meta_weights = self.meta_model.get_weights()
-
+            # 每个task都需要载入最原始的weights进行更新
+            self.meta_model.set_weights(meta_weights)
             for _ in range(inner_step):
                 with tf.GradientTape() as tape:
                     logits = self.meta_model(support_image, training=True)
                     loss = losses.sparse_categorical_crossentropy(support_label, logits)
                     loss = tf.reduce_mean(loss)
 
-                    acc = (np.argmax(logits, -1) == query_label).astype(np.int32).mean()
+                    acc = tf.cast(tf.argmax(logits, axis=-1, output_type=tf.int32) == support_label, tf.float32)
+                    acc = tf.reduce_mean(acc)
 
                 grads = tape.gradient(loss, self.meta_model.trainable_variables)
                 inner_optimizer.apply_gradients(zip(grads, self.meta_model.trainable_variables))
 
-                if writer:
-                    with writer.as_default():
-                        tf.summary.scalar('support_loss', loss, step=self.inner_writer_step)
-                        tf.summary.scalar('support_accuracy', acc, step=self.inner_writer_step)
-                        self.inner_writer_step += 1
+            # 每次经过inner loop更新过后的weights都需要保存一次，保证这个weights后面outer loop训练的是同一个task
+            task_weights.append(self.meta_model.get_weights())
 
-            # 载入support set训练完的模型权重，接下来用来计算query set的loss
-            with tf.GradientTape() as tape:
+        with tf.GradientTape() as tape:
+            for i, (query_image, query_label) in enumerate(zip(meta_query_image, meta_query_label)):
+
+                # 载入每个task weights进行前向传播
+                self.meta_model.set_weights(task_weights[i])
+
                 logits = self.meta_model(query_image, training=True)
                 loss = losses.sparse_categorical_crossentropy(query_label, logits)
                 loss = tf.reduce_mean(loss)
                 batch_loss.append(loss)
 
-                acc = (np.argmax(logits, -1) == query_label).astype(np.int32).mean()
+                acc = tf.cast(tf.argmax(logits, axis=-1) == query_label, tf.float32)
+                acc = tf.reduce_mean(acc)
                 batch_acc.append(acc)
 
-            # 重载最开始的权重，根据上面计算的loss计算梯度和更新方向
-            self.meta_model.set_weights(meta_weights)
-            if outer_optimizer:
-                grads = tape.gradient(loss, self.meta_model.trainable_variables)
-                outer_optimizer.apply_gradients(zip(grads, self.meta_model.trainable_variables))
+            mean_acc = tf.reduce_mean(batch_acc)
+            mean_loss = tf.reduce_mean(batch_loss)
 
-                if writer:
-                    with writer.as_default():
-                        tf.summary.scalar('query_loss', loss, step=self.outer_writer_step)
-                        tf.summary.scalar('query_accuracy', acc, step=self.outer_writer_step)
-                        self.outer_writer_step += 1
+        # 无论是否更新，都需要载入最开始的权重进行更新，防止val阶段改变了原本的权重
+        self.meta_model.set_weights(meta_weights)
+        if outer_optimizer:
+            grads = tape.gradient(mean_loss, self.meta_model.trainable_variables)
+            outer_optimizer.apply_gradients(zip(grads, self.meta_model.trainable_variables))
 
-        return np.array(batch_loss).mean(), np.array(batch_acc).mean()
+        return mean_loss, mean_acc
