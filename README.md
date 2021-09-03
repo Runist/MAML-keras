@@ -76,7 +76,7 @@ parser.add_argument('--input_shape', type=tuple, default=(28, 28, 1),
 2. Start training.
 
 ```shell
-python train.py --n_way=5 --k_shot=1 q_query=1
+python train.py --n_way=5 --k_shot=1 --q_query=1
 ```
 
 ## Part 4. Paper and other implement
