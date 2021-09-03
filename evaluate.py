@@ -15,7 +15,7 @@ from config import args
 import os
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         for gpu in gpus:
@@ -39,11 +39,6 @@ if __name__ == '__main__':
     val_loss, val_acc = mnist_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=5)
     print("Model with mnist initialize weight train for 5 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
 
-    mnist_model.meta_model.load_weights("mnist.h5")
-    optimizer = optimizers.Adam(args.inner_lr)
-    val_loss, val_acc = mnist_model.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=10)
-    print("Model with mnist initialize weight train for 10 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
-
     # maml weights
     maml.meta_model.load_weights("maml.h5")
     optimizer = optimizers.Adam(args.inner_lr)
@@ -54,8 +49,3 @@ if __name__ == '__main__':
     optimizer = optimizers.Adam(args.inner_lr)
     val_loss, val_acc = maml.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=5)
     print("Model with maml weight train for 5 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))
-
-    maml.meta_model.load_weights("maml.h5")
-    optimizer = optimizers.Adam(args.inner_lr)
-    val_loss, val_acc = maml.train_on_batch(val_data.get_one_batch(), inner_optimizer=optimizer, inner_step=10)
-    print("Model with maml weight train for 10 step, val loss: {:.4f}, accuracy: {:.4f}.".format(val_loss, val_acc))

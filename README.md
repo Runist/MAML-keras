@@ -53,10 +53,8 @@ python evaluate.py
 ```
 Model with mnist initialize weight train for 3 step, val loss: 1.8765, accuracy: 0.3400.
 Model with mnist initialize weight train for 5 step, val loss: 1.5195, accuracy: 0.4600.
-Model with mnist initialize weight train for 10 step, val loss: 1.5562, accuracy: 0.4800.
 Model with maml weight train for 3 step, val loss: 0.8904, accuracy: 0.6700.
 Model with maml weight train for 5 step, val loss: 0.5034, accuracy: 0.7800.
-Model with maml weight train for 10 step, val loss: 0.2013, accuracy: 0.9500.
 ```
 
 ## Part 3. Train your own dataset

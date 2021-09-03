@@ -13,7 +13,7 @@ import os
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
     gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
