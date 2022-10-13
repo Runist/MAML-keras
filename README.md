@@ -18,7 +18,7 @@ git clone https://github.com/Runist/MAML-keras.git
 
 ```shell
 cd MAML-keras
-pip installl -r requirements.txt
+pip install -r requirements.txt
 ```
 
 3. Download the *Omiglot* dataset and maml weights.
